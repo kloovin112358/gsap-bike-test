@@ -1,0 +1,342 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
+<style>
+  html {
+    overflow-x: hidden;
+  }
+  .svg-main {
+    height: 100vh;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+  }
+  .svg-outer,
+  .svg-inner {
+    height: 100%;
+    mask-size: 100%;
+    width: 100%;
+    transition: all ease 0.3s;
+    mask-position: center;
+    mask-image: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYwIiBoZWlnaHQ9IjkwIiB2aWV3Qm94PSIwIDAgMTYwIDkwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0wIDBIMTYwVjkwSDAgME0wIDB6IiBmaWxsPSJibGFjayIgLz48L3N2Zz4=");
+    mask-repeat: no-repeat;
+  }
+  .svg-outer .img {
+    width: 100%;
+    height: 100%;
+    background-size: 130%;
+    background-position: center;
+    transition: all ease 0.3s;
+    background-image: url("/splash-background.webp");
+    object-fit: cover;
+  }
+  .fade-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white; /* Adjust color as needed */
+    opacity: 0; /* Start hidden */
+    transition: opacity 0.3s ease;
+  }
+  .background-section {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  #canvas-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: -999; /* Set Three.js in the background */
+  }
+  .video-section {
+    position: relative;
+    height: 100vh; /* Full viewport height */
+    overflow: hidden;
+  }
+</style>
+<script>
+  import * as THREE from "three";
+  import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+  import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+  import { gsap } from "gsap";
+  import { ScrollTrigger } from "gsap/ScrollTrigger";
+  import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
+  import Plyr from "plyr";
+  gsap.registerPlugin(ScrollTrigger);
+
+  const tl = gsap.timeline({
+    scrollTrigger: {
+      trigger: ".svg-main",
+      scrub: true,
+      pin: true,
+      start: "50% 50%",
+      end: "200% 50%",
+    },
+  });
+  tl.to(
+    ".svg-outer",
+    {
+      maskSize: "50%",
+    },
+    "outer"
+  );
+  tl.to(
+    ".fade-text",
+    {
+      opacity: 1,
+      duration: 1, // Adjust duration as needed
+    },
+    "outer"
+  );
+
+  const canvasContainer = document.getElementById("canvas-container");
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(
+    75,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    1000
+  );
+
+  const renderer = new THREE.WebGLRenderer();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  canvasContainer.insertBefore(renderer.domElement, canvasContainer.firstChild);
+  // canvasContainer.appendChild(renderer.domElement);
+
+  //controls.update() must be called after any manual changes to the camera's transform
+  camera.position.set(2, 1.3, 2.5);
+  camera.rotation.set(0, 0.5, 0); // Set camera rotation (in radians)
+
+  //   const light2 = new THREE.AmbientLight(0x404040, 100);
+  //   scene.add(light2);
+
+  // Add PointLight
+  // const light = new THREE.PointLight(0x404040, 1000); // Color: soft yellow, Intensity: 5, Distance: 100
+  // light.position.set(3, 4, 0);
+  // light.castShadow = true;
+  // scene.add(light);
+  //   const pointLightHelper = new THREE.PointLightHelper(light, 1); // Helper with size of 1
+  //   scene.add(pointLightHelper);
+
+  // const light2 = new THREE.PointLight(0x404040, 1000); // Color: soft yellow, Intensity: 5, Distance: 100
+  // light2.position.set(-4, 1, 0);
+  // light2.castShadow = true;
+  // scene.add(light2);
+  //   const pointLightHelper2 = new THREE.PointLightHelper(light2, 1); // Helper with size of 1
+  //   scene.add(pointLightHelper2);
+
+  //   const axesHelper = new THREE.AxesHelper(5); // Size of the axes
+  //   scene.add(axesHelper);
+
+  // Add GridHelper
+  //   const gridHelper = new THREE.GridHelper(10, 10); // Size and divisions of the grid
+  //   scene.add(gridHelper);
+  // Load the glTF model
+
+  // const hemiLight = new THREE.HemisphereLight(0xffffff, 0x8d8d8d, 3);
+  // hemiLight.position.set(0, 50, 50);
+  // scene.add(hemiLight);
+  // const rgbeLoader = new RGBELoader().setPath(
+  //   "https://threejs.org/examples/textures/equirectangular/"
+  // );
+  // const [texture] = await Promise.all([
+  //   rgbeLoader.loadAsync("spruit_sunrise_1k.hdr"),
+  // ]);
+  // scene.background = new THREE.Color(0xffffff);
+  scene.background = new THREE.Color(0xa0a0a0);
+  scene.fog = new THREE.Fog(0xa0a0a0, 10, 20);
+
+  const hemiLight = new THREE.HemisphereLight(0xffffff, 0x8d8d8d, 3);
+  hemiLight.position.set(0, 20, 0);
+  scene.add(hemiLight);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 3);
+  dirLight.position.set(-3, 10, 10);
+  dirLight.castShadow = true;
+  dirLight.shadow.camera.top = 2;
+  dirLight.shadow.camera.bottom = -2;
+  dirLight.shadow.camera.left = -2;
+  dirLight.shadow.camera.right = 2;
+  dirLight.shadow.camera.near = 0.1;
+  dirLight.shadow.camera.far = 40;
+  scene.add(dirLight);
+  const mesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(100, 100),
+    new THREE.MeshPhongMaterial({ color: 0xcbcbcb, depthWrite: false })
+  );
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.receiveShadow = true;
+  scene.add(mesh);
+  // texture.mapping = THREE.EquirectangularReflectionMapping;
+
+  // scene.background = texture;
+  // // scene.backgroundBlurriness = 0.2;
+  // scene.environment = texture;
+
+  let model;
+  const loader = new GLTFLoader();
+  loader.load("/road_bike.glb", (gltf) => {
+    model = gltf.scene;
+
+    scene.add(model);
+
+    model.traverse(function (object) {
+      if (object.isMesh) object.castShadow = true;
+    });
+
+    // Initialize GSAP timeline after the model is loaded
+    initAnimation();
+  });
+
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.render(scene, camera);
+
+  // Handle window resize only for large viewports
+  window.addEventListener("resize", () => {
+    // Update camera and renderer for large viewports
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+  });
+
+  function initAnimation() {
+    const loadingSpinner = document.getElementById("loadingSpinner");
+    loadingSpinner.style.display = "none";
+    loadingSpinner.setAttribute("aria-hidden", "true");
+    // Create a GSAP timeline
+    const tl = gsap.timeline();
+    tl.to("#canvas-container", {
+      opacity: 1,
+      duration: 2,
+      delay: 0, // Wait for 2 seconds after the overlay fade-out starts
+    });
+    // Add delay to make sure the model is fully loaded and rendered
+  }
+  function animate() {
+    requestAnimationFrame(animate);
+
+    renderer.render(scene, camera);
+  }
+
+  // Start the animation loop
+  animate();
+
+  const tl2 = gsap.timeline({
+    scrollTrigger: {
+      trigger: "#canvas-container",
+      scrub: true,
+      pin: true,
+      start: "50% 50%",
+      end: "400% 50%",
+    },
+  });
+  tl2.to(
+    camera.position, // Target the model's rotation property
+    {
+      x: -1.3, // Move along the x-axis
+      y: 2.8, // Move along the y-axis
+      z: 0, // Move along the z-axis
+      duration: 2, // Adjust duration as needed
+      ease: "power1.inOut", // Easing for smooth movement
+    },
+    "outer" // Label for the animation, sync with other animations if needed
+  );
+  tl2.to(
+    camera.rotation,
+    {
+      x: 0, // Rotate 90 degrees on the x-axis (in radians)
+      y: -1.65, // Rotate 45 degrees on the y-axis (in radians)
+      z: 0, // No rotation on the z-axis
+      duration: 2, // Ensure the duration matches the position animation
+      ease: "power1.inOut",
+    },
+    "outer" // Use the same label to sync both animations
+  );
+  tl2.to(
+    camera.position,
+    {
+      x: 2, // Move along the x-axis
+      y: 1, // Move along the y-axis
+      z: -1.5, // Move along the z-axis
+      duration: 2, // Adjust duration as needed
+      ease: "power1.inOut", // Easing for smooth movement
+    },
+    "+=0.3" // Use the same label to sync both animations
+  );
+  tl2.to(
+    camera.rotation,
+    {
+      x: 0, // Rotate 90 degrees on the x-axis (in radians)
+      y: -4, // Rotate 45 degrees on the y-axis (in radians)
+      z: 0, // No rotation on the z-axis
+      duration: 2, // Ensure the duration matches the position animation
+      ease: "power1.inOut",
+    },
+    "<" // Use the same label to sync both animations
+  );
+  gsap.from("#theEndText", {
+    duration: 4,
+    scale: 0.5, // Start smaller
+    opacity: 0, // Start invisible
+    filter: "blur(10px)", // Start blurry
+    ease: "power2.out",
+    scrollTrigger: {
+      trigger: "#theEndText", // Element to trigger animation
+      start: "top 100%", // Start when top of element is 80% from the top of viewport
+      end: "top 20%", // End when top of element is 20% from top of viewport
+      scrub: 1, // Smooth scrolling effect
+      toggleActions: "play none none none", // Play the animation once when it enters the viewport
+      once: true,
+    },
+  });
+</script>
+<Layout title="Home">
+  <div class="svg-main">
+    <div class="svg-outer">
+      <div class="img"></div>
+      <h1 class="fade-text text-center display-4 fw-bold">
+        Speed, speed, speed
+      </h1>
+    </div>
+  </div>
+  <div
+    style="min-height:100vh;background-image:url(/bikeheader.webp);background-size:cover;background-position: fixed;background-repeat: no-repeat;background-attachment:fixed;"
+    class="d-flex flex-column justify-content-center"
+  >
+    <div>
+      <h1 class="text-white display-1 fw-bold text-center">
+        The award-winning F5 track bike
+      </h1>
+      <p class="text-white lead text-center">Built for innovators like you.</p>
+    </div>
+  </div>
+  <section class="background-section">
+    <div id="canvas-container" style="opacity:0;"></div>
+    <!-- <h1 class="text-white">dogs</h1> -->
+    <div id="splash-text">
+      <div class="text-center" id="loadingSpinner">
+        <div class="spinner-border" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    </div>
+  </section>
+  <div style="height:350vh" style="background-color:black;"></div>
+  <section style="height:100vh;position:relative;background-color:black;">
+    <h1
+      style="position:absolute;top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);"
+      class="text-white display-1 fw-bold"
+      id="theEndText"
+    >
+      The End
+    </h1>
+  </section>
+</Layout>
